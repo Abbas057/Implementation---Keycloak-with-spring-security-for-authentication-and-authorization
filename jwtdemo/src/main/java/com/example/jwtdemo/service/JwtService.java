@@ -99,4 +99,17 @@ public class JwtService {
 
     }
 
+    public String generateRefreshToken(UserDetails userDetails) {
+
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(new Date())
+                .setExpiration(
+                        new Date(System.currentTimeMillis()
+                                + 7 * 24 * 60 * 60 * 1000L)
+                )
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
 }

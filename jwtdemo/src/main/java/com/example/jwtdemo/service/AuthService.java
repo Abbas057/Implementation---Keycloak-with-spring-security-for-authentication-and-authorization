@@ -1,7 +1,6 @@
 package com.example.jwtdemo.service;
 
-import com.example.jwtdemo.dto.LoginRequest;
-import com.example.jwtdemo.dto.LoginResponse;
+import com.example.jwtdemo.dto.*;
 import com.example.jwtdemo.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -23,42 +22,94 @@ public class AuthService {
 
     private final PasswordEncoder passwordEncoder;
 
-    public LoginResponse login(LoginRequest request) {
+    private final RefreshTokenService refreshTokenService;
 
-        System.out.println("Inside AuthService");
+    public TokenResponse login(LoginRequest request) {
 
-        try {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsername(),
+                        request.getPassword()
+                )
+        );
 
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getUsername(),
-                            request.getPassword()
-                    )
-            );
+        UserDetails user =
+                userDetailsService.loadUserByUsername(
+                        request.getUsername()
+                );
 
-            System.out.println("Authentication Success");
+        String accessToken =
+                jwtService.generateToken(user);
 
-        } catch (Exception e) {
+        String refreshToken =
+                jwtService.generateRefreshToken(user);
 
-            e.printStackTrace();
+        refreshTokenService.saveRefreshToken(
+                user.getUsername(),
+                refreshToken
+        );
 
-            throw e;
+        return new TokenResponse(
+                accessToken,
+                refreshToken
+        );
+    }
+
+    public TokenResponse refreshToken(
+            RefreshTokenRequest request) {
+
+        String refreshToken = request.getRefreshToken();
+
+        String username = jwtService.extractUsername(refreshToken);
+
+        String storedRefreshToken =
+                refreshTokenService.getRefreshToken(username);
+
+        if (storedRefreshToken == null ||
+                !storedRefreshToken.equals(refreshToken)) {
+
+            throw new RuntimeException("Invalid Refresh Token");
+
         }
 
         UserDetails user =
-                userDetailsService.loadUserByUsername(request.getUsername());
+                userDetailsService.loadUserByUsername(username);
 
-        System.out.println("Stored Hash : " + user.getPassword());
+        String newAccessToken =
+                jwtService.generateToken(user);
 
-        System.out.println("Matches : " +
-                passwordEncoder.matches(
-                        request.getPassword(),
-                        user.getPassword()
-                ));
+        String newRefreshToken =
+                jwtService.generateRefreshToken(user);
 
+        refreshTokenService.saveRefreshToken(
+                username,
+                newRefreshToken
+        );
 
-        String token = jwtService.generateToken(user);
-
-        return new LoginResponse(token);
+        return new TokenResponse(
+                newAccessToken,
+                newRefreshToken
+        );
     }
+
+    /**
+     * Invalidates the Refresh Token by removing it
+     * from Redis.
+     *
+     * @param request Logout request.
+     * @return Logout status message.
+     */
+    public String logout(
+            LogoutRequest request) {
+
+        String refreshToken = request.getRefreshToken();
+
+        String username = jwtService.extractUsername(refreshToken);
+
+        refreshTokenService.deleteRefreshToken(username);
+
+        return "Logout Successful";
+
+    }
+
 }

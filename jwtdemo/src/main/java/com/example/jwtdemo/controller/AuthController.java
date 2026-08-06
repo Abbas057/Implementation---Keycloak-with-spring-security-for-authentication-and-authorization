@@ -1,7 +1,6 @@
 package com.example.jwtdemo.controller;
 
-import com.example.jwtdemo.dto.LoginRequest;
-import com.example.jwtdemo.dto.LoginResponse;
+import com.example.jwtdemo.dto.*;
 import com.example.jwtdemo.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +14,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
+    public TokenResponse login(@Valid @RequestBody LoginRequest request) {
 
         System.out.println("Inside Controller");
 
@@ -31,5 +30,28 @@ public class AuthController {
         public String getBalance() {
             return "Balance = ₹1,25,000";
         }
+    }
+
+    @PostMapping("/refresh")
+    public TokenResponse refreshToken(
+            @RequestBody RefreshTokenRequest request) {
+
+        return authService.refreshToken(request);
+
+    }
+
+    /**
+     * Logs out the authenticated user by invalidating
+     * the Refresh Token stored in Redis.
+     *
+     * @param request Logout request containing Refresh Token.
+     * @return Success message.
+     */
+    @PostMapping("/logout")
+    public String logout(
+            @RequestBody LogoutRequest request) {
+
+        return authService.logout(request);
+
     }
 }
