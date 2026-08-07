@@ -1,6 +1,7 @@
 package com.example.jwtdemo.filter;
 
 import com.example.jwtdemo.service.JwtService;
+import com.example.jwtdemo.service.TokenBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +23,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -40,6 +42,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         jwt = authHeader.substring(7);
+
+
+        // Check whether token is revoked
+        String jti = jwtService.extractJti(jwt);
+
+        if (tokenBlacklistService.isBlacklisted(jti)) {
+
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+
 
         username = jwtService.extractUsername(jwt);
 

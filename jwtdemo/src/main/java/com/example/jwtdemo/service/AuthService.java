@@ -10,6 +10,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -23,6 +25,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
 
     private final RefreshTokenService refreshTokenService;
+
+    private final TokenBlacklistService tokenBlacklistService;
 
     public TokenResponse login(LoginRequest request) {
 
@@ -99,17 +103,39 @@ public class AuthService {
      * @param request Logout request.
      * @return Logout status message.
      */
+    /**
+     * Logs out user by:
+     * 1. Blacklisting Access Token
+     * 2. Removing Refresh Token from Redis
+     *
+     * @param request logout request
+     * @return logout message
+     */
     public String logout(
             LogoutRequest request) {
 
-        String refreshToken = request.getRefreshToken();
 
-        String username = jwtService.extractUsername(refreshToken);
+        String accessToken =  request.getAccessToken();
+
+
+        String jti =  jwtService.extractJti(accessToken);
+
+
+        Date expiry = jwtService.extractExpire(accessToken);
+
+
+        long remainingTime = expiry.getTime() - System.currentTimeMillis();
+
+
+        if (remainingTime > 0) {
+            tokenBlacklistService.blacklistToken(jti, remainingTime);
+        }
+
+        String username = jwtService.extractUsername(request.getRefreshToken());
 
         refreshTokenService.deleteRefreshToken(username);
 
         return "Logout Successful";
-
     }
 
 }

@@ -13,6 +13,7 @@ import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 @Service
@@ -49,6 +50,7 @@ public class JwtService {
                 .builder()
                 .setClaims(extraClaims)
                 .setSubject(userDetails.getUsername())
+                .setId(UUID.randomUUID().toString())
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(
                         new Date(System.currentTimeMillis() + jwtExpiration)
@@ -111,5 +113,40 @@ public class JwtService {
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+
+    /**
+     * Extracts unique token identifier from JWT.
+     *
+     * @param token JWT token
+     * @return JWT ID
+     */
+    public String extractJti(String token) {
+
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getId();
+
+    }
+
+    /**
+     * Extracts expiration date from JWT token.
+     *
+     * @param token JWT token
+     * @return expiration date
+     */
+    public Date extractExpire(String token) {
+
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+    }
+
+
 
 }
