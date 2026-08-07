@@ -2,6 +2,7 @@ package com.example.jwtdemo.controller;
 
 import com.example.jwtdemo.dto.*;
 import com.example.jwtdemo.service.AuthService;
+import com.example.jwtdemo.service.BalanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ public class AuthController {
 
     private final AuthService authService;
 
+
     @PostMapping("/login")
     public TokenResponse login(@Valid @RequestBody LoginRequest request) {
 
@@ -20,16 +22,6 @@ public class AuthController {
 
         return authService.login(request);
 
-    }
-
-    @RestController
-    @RequestMapping("/balance")
-    public class BalanceController {
-
-        @GetMapping
-        public String getBalance() {
-            return "Balance = ₹1,25,000";
-        }
     }
 
     @PostMapping("/refresh")
