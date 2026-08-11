@@ -16,6 +16,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -25,13 +26,51 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+ //   private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     private final UserDetailsService userDetailsService;
 
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
     private final CustomAccessDeniedHandler accessDeniedHandler;
+
+//    @Bean
+//    public SecurityFilterChain securityFilterChain(HttpSecurity http)
+//            throws Exception {
+//
+//        http
+//                .csrf(csrf -> csrf.disable())
+//
+//                .exceptionHandling(exception ->
+//                        exception
+//                                .authenticationEntryPoint(
+//                                        authenticationEntryPoint
+//                                )
+//                                .accessDeniedHandler(
+//                                        accessDeniedHandler
+//                                )
+//                )
+//
+//                .sessionManagement(session ->
+//                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+//                )
+//
+//                .authorizeHttpRequests(auth ->
+//                        auth
+//                                .requestMatchers("/auth/**").permitAll()
+//                                .requestMatchers("/balance/**").hasRole("CUSTOMER")
+//                                .requestMatchers("/deposit/**").hasRole("CASHIER")
+//                                .requestMatchers("/loan/**").hasRole("MANAGER")
+//                                .anyRequest().authenticated()
+//                )
+//
+//                .authenticationProvider(authenticationProvider())
+//
+//                .addFilterBefore(jwtAuthenticationFilter,
+//                        UsernamePasswordAuthenticationFilter.class);
+//
+//        return http.build();
+//    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
@@ -50,25 +89,33 @@ public class SecurityConfig {
                                 )
                 )
 
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/auth/**").permitAll()
+                        .anyRequest().authenticated()
                 )
 
-                .authorizeHttpRequests(auth ->
-                        auth
-                                .requestMatchers("/auth/**").permitAll()
-                                .requestMatchers("/balance/**").hasRole("CUSTOMER")
-                                .requestMatchers("/deposit/**").hasRole("CASHIER")
-                                .requestMatchers("/loan/**").hasRole("MANAGER")
-                                .anyRequest().authenticated()
-                )
-
-                .authenticationProvider(authenticationProvider())
-
-                .addFilterBefore(jwtAuthenticationFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+                .oauth2ResourceServer(oauth2 ->
+                        oauth2.jwt(jwt ->
+                                jwt.jwtAuthenticationConverter(
+                                        jwtAuthenticationConverter()
+                                )
+                        )
+                );
 
         return http.build();
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+
+        JwtAuthenticationConverter converter =
+                new JwtAuthenticationConverter();
+
+        converter.setJwtGrantedAuthoritiesConverter(
+                new KeycloakRoleConverter()
+        );
+
+        return converter;
     }
 
     @Bean
